@@ -226,7 +226,7 @@ class Summary {
     }
 
     incrementFilesSkipped(amount) {
-        this.addSkippedFiles += amount;
+        this.filesSkipped += amount;
     }
 
     incrementFilesIgnored(amount) {
