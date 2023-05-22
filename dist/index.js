@@ -33843,8 +33843,8 @@ function printSummary(summary)
   console.log(`Files Created   : ${summary.filesCreated}`);
   console.log(`Folders Created : ${summary.filesCreated}`);
   console.log(`Files Changed   : ${summary.filesChanged}`);
-  console.log(`Files Changed   : ${summary.filesSkipped}`);
-  console.log(`Files Changed   : ${summary.filesIgnored}`);
+  console.log(`Files Skipped   : ${summary.filesSkipped}`);
+  console.log(`Files Ignored   : ${summary.filesIgnored}`);
 }
 
 new Deployer(config, options)
