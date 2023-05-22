@@ -14,7 +14,8 @@ inputs:
     required: false
     default: 'root'
   password:
-    required: true
+    required: false
+    default: ''
   compress:
     required: false
     default: false
