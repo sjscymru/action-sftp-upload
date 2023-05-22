@@ -8,6 +8,7 @@ const { lstat, opendir } = __nccwpck_require__(3292);
 const Client = __nccwpck_require__(7551);
 const path = __nccwpck_require__(1017);
 const { default: minimatch } = __nccwpck_require__(2002);
+const { Summary } = __nccwpck_require__(8608);
 
 class Deployer {
 
@@ -39,14 +40,20 @@ class Deployer {
 
         console.log(`found ${this.remoteFiles.length} remote files`);
 
-        await this.upload();
+        const summary = await this.upload();
         await this.sftp.end();
+
+        return summary;
     }
 
     async upload() {
+        // create summary object
+        const summary = new Summary();
+
         // upload files to remote
         for (const l of this.localFiles) {
             if (this.isIgnoreFile(`${l.path}${l.isDirectory ? '/' : ''}`)) {
+                summary.incrementFilesIgnored(1);
                 console.log(`ignoring local ${l.path}`);
                 continue;
             }
@@ -64,6 +71,7 @@ class Deployer {
                             await this.sftp.delete(remoteFile, true);
                         }
                     }
+                    summary.incrementFilesChanged(1);
                     await this.sftp.put(localFile, remoteFile);
                 }
             } else {
@@ -73,26 +81,34 @@ class Deployer {
                     } else if (!r.isDirectory) {
                         if (r.size !== l.size) {
                             console.log(`${this.options.dryRun ? 'Dry-run: ' : ''}replace different -> ${l.path}`);
+                            summary.incrementFilesChanged(1);
                             if (!this.options.dryRun) await this.sftp.put(localFile, remoteFile);
                         } else if (r.mtime < l.mtime) {
                             console.log(`${this.options.dryRun ? 'Dry-run: ' : ''}replace newer -> ${l.path}`);
+                            summary.incrementFilesChanged(1);
                             if (!this.options.dryRun) await this.sftp.put(localFile, remoteFile);
                         } else {
+                            summary.incrementFilesSkipped(1);
                             console.log(`server has same file: ${localFile}, skipping upload.`);
                         }
                     }
                 } else if (!l.isDirectory) {
                     console.log(`${this.options.dryRun ? 'Dry-run: ' : ''}creating file -> ${remoteFile}`);
-                    if (!this.options.dryRun){
+                    summary.incrementFoldersCreated(1);
+                    summary.incrementFilesCreated(1);                    
+                    if (!this.options.dryRun) {                        
                         await this.sftp.mkdir(path.dirname(remoteFile), true);
                         await this.sftp.put(localFile, remoteFile);
                     } 
                 } else {
                     console.log(`${this.options.dryRun ? 'Dry-run: ' : ''}creating folder -> ${remoteFile}`);
+                    summary.incrementFoldersCreated(1);
                     if (!this.options.dryRun) await this.sftp.mkdir(remoteFile, true);
                 }
             }
         }
+
+        return summary;
     }
 
 
@@ -181,6 +197,44 @@ class Deployer {
 }
 
 module.exports = { Deployer };
+
+/***/ }),
+
+/***/ 8608:
+/***/ ((module) => {
+
+class Summary {
+    
+    constructor() {
+        this.filesCreated = 0;
+        this.foldersCreated = 0;
+        this.filesChanged = 0;
+        this.filesSkipped = 0;
+        this.filesIgnored = 0;
+    }
+
+    incrementFilesCreated(amount) {
+        this.filesCreated += amount;
+    }
+
+    incrementFoldersCreated(amount) {
+        this.foldersCreated += amount;
+    }
+    
+    incrementFilesChanged(amount) {
+        this.filesChanged += amount;
+    }
+
+    incrementFilesSkipped(amount) {
+        this.addSkippedFiles += amount;
+    }
+
+    incrementFilesIgnored(amount) {
+        this.filesIgnored += amount;
+    }
+}
+
+module.exports = { Summary };
 
 /***/ }),
 
@@ -3732,6 +3786,19 @@ function u8Concat (parts) {
   }
   return u8
 }
+
+
+/***/ }),
+
+/***/ 4137:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+const binding = __nccwpck_require__(4240);
+
+module.exports = binding.getCPUInfo;
 
 
 /***/ }),
@@ -18974,7 +19041,7 @@ const crypto = __nccwpck_require__(6113);
 
 let cpuInfo;
 try {
-  cpuInfo = __nccwpck_require__(7295)();
+  cpuInfo = __nccwpck_require__(4137)();
 } catch {}
 
 const { bindingAvailable, CIPHER_INFO, MAC_INFO } = __nccwpck_require__(5708);
@@ -19358,7 +19425,7 @@ let AESGCMDecipher;
 let ChaChaPolyDecipher;
 let GenericDecipher;
 try {
-  binding = __nccwpck_require__(9623);
+  binding = __nccwpck_require__(9041);
   ({ AESGCMCipher, ChaChaPolyCipher, GenericCipher,
      AESGCMDecipher, ChaChaPolyDecipher, GenericDecipher } = binding);
 } catch {}
@@ -32301,19 +32368,17 @@ exports["default"] = _default;
 
 /***/ }),
 
-/***/ 9623:
-/***/ ((module) => {
+/***/ 4240:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-module.exports = eval("require")("./crypto/build/Release/sshcrypto.node");
-
+module.exports = require(__nccwpck_require__.ab + "build/Release/cpufeatures.node")
 
 /***/ }),
 
-/***/ 7295:
-/***/ ((module) => {
+/***/ 9041:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-module.exports = eval("require")("cpu-features");
-
+module.exports = require(__nccwpck_require__.ab + "lib/protocol/crypto/build/Release/sshcrypto.node")
 
 /***/ }),
 
@@ -33741,6 +33806,7 @@ var __webpack_exports__ = {};
 const core = __nccwpck_require__(2186);
 const fs = __nccwpck_require__(7147);
 const { Deployer } = __nccwpck_require__(262);
+const { Summary } = __nccwpck_require__(8608);
 
 const config = {
   host: core.getInput('host'), // Required.
@@ -33771,9 +33837,25 @@ if (config.privateKey && !/^[-]+[A-Z ]+[-]+\n/.test(config.privateKey)) {
   }
 }
 
+function printSummary(summary)
+{
+  console.log('Upload Summary:');
+  console.log(`Files Created   : ${summary.filesCreated}`);
+  console.log(`Folders Created : ${summary.filesCreated}`);
+  console.log(`Files Changed   : ${summary.filesChanged}`);
+  console.log(`Files Changed   : ${summary.filesSkipped}`);
+  console.log(`Files Changed   : ${summary.filesIgnored}`);
+}
+
 new Deployer(config, options)
   .sync()
-  .then(() => console.log('sftp upload success!'));
+  .then((summary) => {
+    console.log('sftp upload success!');
+    printSummary(summary);
+  })
+  .error(() => {
+    console.log('error occurred during sftp upload');
+  });
 
 
 })();

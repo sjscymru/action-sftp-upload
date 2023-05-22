@@ -1,6 +1,7 @@
 const core = require('@actions/core');
 const fs = require('fs');
 const { Deployer } = require('./lib/deployer');
+const { Summary } = require('./lib/summary');
 
 const config = {
   host: core.getInput('host'), // Required.
@@ -31,7 +32,23 @@ if (config.privateKey && !/^[-]+[A-Z ]+[-]+\n/.test(config.privateKey)) {
   }
 }
 
+function printSummary(summary)
+{
+  console.log('Upload Summary:');
+  console.log(`Files Created   : ${summary.filesCreated}`);
+  console.log(`Folders Created : ${summary.filesCreated}`);
+  console.log(`Files Changed   : ${summary.filesChanged}`);
+  console.log(`Files Changed   : ${summary.filesSkipped}`);
+  console.log(`Files Changed   : ${summary.filesIgnored}`);
+}
+
 new Deployer(config, options)
   .sync()
-  .then(() => console.log('sftp upload success!'));
+  .then((summary) => {
+    console.log('sftp upload success!');
+    printSummary(summary);
+  })
+  .error(() => {
+    console.log('error occurred during sftp upload');
+  });
 
