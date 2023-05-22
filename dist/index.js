@@ -33852,9 +33852,6 @@ new Deployer(config, options)
   .then((summary) => {
     console.log('sftp upload success!');
     printSummary(summary);
-  })
-  .error(() => {
-    console.log('error occurred during sftp upload');
   });
 
 
